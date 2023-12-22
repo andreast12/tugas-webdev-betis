@@ -1,15 +1,20 @@
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
-import { ApiUrlContext, DaftarPerahuContext } from "../../App";
+import {
+  ApiUrlContext,
+  DaftarPerahuContext,
+  HeaderMessageContext,
+} from "../../App";
 import { useContext } from "react";
 
-function JualModal({ show, handleClose, perahuId, perahuName }) {
+function JualModal({ show, handleClose, perahu }) {
   const apiUrl = useContext(ApiUrlContext);
   const { daftarPerahu, setDaftarPerahu } = useContext(DaftarPerahuContext);
+  const { headerMessage, setHeaderMessage } = useContext(HeaderMessageContext);
 
   const jualPerahu = async () => {
     try {
-      const res = await fetch(`${apiUrl}/perahu/${perahuId}`, {
+      const res = await fetch(`${apiUrl}/perahu/${perahu.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${import.meta.env.VITE_ACCESS_TOKEN}`,
@@ -17,8 +22,9 @@ function JualModal({ show, handleClose, perahuId, perahuName }) {
       });
       const data = await res.json();
       if (data.status === "FAILED") throw new Error(data.message);
-      setDaftarPerahu(daftarPerahu.filter((perahu) => perahu.id !== perahuId));
+      setDaftarPerahu(daftarPerahu.filter((item) => item.id !== perahu.id));
       handleClose();
+      setHeaderMessage({ ...headerMessage, show: true, message: data.message });
     } catch (error) {
       console.error(error.message);
     }
@@ -30,7 +36,7 @@ function JualModal({ show, handleClose, perahuId, perahuName }) {
         <Modal.Title>Jual Perahu</Modal.Title>
       </Modal.Header>
       <Modal.Body className="text-break">
-        Apakah anda yakin ingin menjual {perahuName}?
+        Apakah anda yakin ingin menjual {perahu.name}?
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>

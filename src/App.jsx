@@ -1,46 +1,24 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { Header } from "./components/Header";
 import { ListPerahu } from "./components/ListPerahu";
-import { Button, Stack } from "react-bootstrap";
 import BeliEditModal from "./components/modals/BeliEditModal";
+import { BeliEditModalContextProvider } from "./components/modals/BeliEditModalContextProvider";
 
 export const ApiUrlContext = createContext(
   "https://oprec-betis-be.up.railway.app"
 );
 export const DaftarPerahuContext = createContext();
-export const BeliEditModalContext = createContext();
+export const HeaderMessageContext = createContext();
 
 function App() {
   const apiUrl = useContext(ApiUrlContext);
 
   const [daftarPerahu, setDaftarPerahu] = useState([]);
-  const [beliEditModal, setBeliEditModal] = useState({
+  const [headerMessage, setHeaderMessage] = useState({
     show: false,
-    mode: "BELI", // "BELI" atau "EDIT"
-    perahuId: "",
+    message: "",
+    variant: "success",
   });
-
-  const closeBeliEditModal = () => {
-    setBeliEditModal((prevBeliEditModal) => ({
-      ...prevBeliEditModal,
-      show: false,
-    }));
-  };
-  const showBeliModal = () => {
-    setBeliEditModal((prevBeliEditModal) => ({
-      ...prevBeliEditModal,
-      show: true,
-      mode: "BELI",
-    }));
-  };
-  const showEditModal = (id) => {
-    setBeliEditModal((prevBeliEditModal) => ({
-      ...prevBeliEditModal,
-      show: true,
-      mode: "EDIT",
-      perahuId: id,
-    }));
-  };
 
   // Mem-fetch daftar perahu ketika page load
   useEffect(() => {
@@ -65,19 +43,17 @@ function App() {
 
   return (
     <>
-      <Header />
-      <Stack direction="horizontal" className="container mb-3">
-        <Button variant="primary" className="ms-auto" onClick={showBeliModal}>
-          Beli Perahu
-        </Button>
-      </Stack>
-
-      <DaftarPerahuContext.Provider value={{ daftarPerahu, setDaftarPerahu }}>
-        <BeliEditModalContext.Provider value={{ beliEditModal, showEditModal }}>
-          <ListPerahu />
-          <BeliEditModal handleClose={closeBeliEditModal} />
-        </BeliEditModalContext.Provider>
-      </DaftarPerahuContext.Provider>
+      <HeaderMessageContext.Provider
+        value={{ headerMessage, setHeaderMessage }}
+      >
+        <Header />
+        <DaftarPerahuContext.Provider value={{ daftarPerahu, setDaftarPerahu }}>
+          <BeliEditModalContextProvider>
+            <ListPerahu />
+            <BeliEditModal />
+          </BeliEditModalContextProvider>
+        </DaftarPerahuContext.Provider>
+      </HeaderMessageContext.Provider>
     </>
   );
 }

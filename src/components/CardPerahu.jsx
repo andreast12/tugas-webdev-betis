@@ -2,9 +2,10 @@ import { Card, ListGroup, Button, Badge } from "react-bootstrap";
 import {
   ApiUrlContext,
   DaftarPerahuContext,
-  BeliEditModalContext,
+  HeaderMessageContext,
 } from "../App";
 import { useContext, useEffect, useState } from "react";
+import { BeliEditModalContext } from "./modals/BeliEditModalContextProvider";
 
 /**
  * Fungsi untuk menentukan warna text (foreground) berdasarkan warna background
@@ -20,9 +21,10 @@ const getForegroundFromBackground = (backgroundColor) => {
 };
 
 export const CardPerahu = ({ perahu, handleShowJualModal }) => {
-  const { showEditModal } = useContext(BeliEditModalContext);
   const apiUrl = useContext(ApiUrlContext);
   const { daftarPerahu, setDaftarPerahu } = useContext(DaftarPerahuContext);
+  const { showEditModal } = useContext(BeliEditModalContext);
+  const { headerMessage, setHeaderMessage } = useContext(HeaderMessageContext);
 
   const [foregroundColor, setForegroundColor] = useState(
     getForegroundFromBackground(perahu.color)
@@ -51,6 +53,7 @@ export const CardPerahu = ({ perahu, handleShowJualModal }) => {
             : item
         )
       );
+      setHeaderMessage({ ...headerMessage, show: true, message: data.message });
     } catch (error) {
       console.error(error.message);
     }
@@ -82,16 +85,13 @@ export const CardPerahu = ({ perahu, handleShowJualModal }) => {
           Last updated at {new Date(perahu.updated_at).toLocaleString()}
         </ListGroup.Item>
         <ListGroup.Item className="d-flex justify-content-evenly">
-          <Button variant="primary" onClick={() => showEditModal(perahu.id)}>
+          <Button variant="primary" onClick={() => showEditModal(perahu)}>
             Edit
           </Button>
           <Button variant="secondary" onClick={toggleIsSailing}>
             {perahu.is_sailing ? "Berlabuh" : "Berlayar"}
           </Button>
-          <Button
-            variant="danger"
-            onClick={() => handleShowJualModal(perahu.id, perahu.name)}
-          >
+          <Button variant="danger" onClick={() => handleShowJualModal(perahu)}>
             Jual
           </Button>
         </ListGroup.Item>

@@ -1,87 +1,28 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import {
   ApiUrlContext,
   DaftarPerahuContext,
-  BeliEditModalContext,
+  HeaderMessageContext,
 } from "../../App";
 import { Alert } from "react-bootstrap";
+import { BeliEditModalContext } from "./BeliEditModalContextProvider";
 
-function BeliEditModal({ handleClose }) {
+function BeliEditModal() {
   const apiUrl = useContext(ApiUrlContext);
   const { daftarPerahu, setDaftarPerahu } = useContext(DaftarPerahuContext);
-  const { beliEditModal } = useContext(BeliEditModalContext);
-
-  const [daftarWarna, setDaftarWarna] = useState([]);
-  const [perahu, setPerahu] = useState({
-    name: "",
-    description: "",
-    capacity: "0",
-    color: "",
-  });
-  const [warning, setWarning] = useState({
-    show: false,
-    message: "",
-  });
-
-  // Mem-fetch daftar warna ketika page load
-  useEffect(() => {
-    const getDaftarWarna = async () => {
-      const res = await fetch(`${apiUrl}/perahu/warna`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_ACCESS_TOKEN}`,
-        },
-      });
-      const data = await res.json();
-      setDaftarWarna(data.daftarWarna);
-    };
-
-    getDaftarWarna();
-  }, []);
-
-  // Akan ke-trigger setiap kali modal ditampilkan atau ditutup
-  useEffect(() => {
-    const getPerahuById = async (id) => {
-      try {
-        const res = await fetch(`${apiUrl}/perahu/${id}`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_ACCESS_TOKEN}`,
-          },
-        });
-        const data = await res.json();
-        if (data.status === "FAILED") throw new Error(data.message);
-        setPerahu({
-          name: data.perahu.name,
-          description: data.perahu.description,
-          capacity: data.perahu.capacity,
-          color: data.perahu.color,
-        });
-      } catch (error) {
-        console.error(error.message);
-      }
-    };
-
-    if (beliEditModal.mode === "BELI")
-      setPerahu({
-        name: "",
-        description: "",
-        capacity: "0",
-        color: daftarWarna[0],
-      });
-    else getPerahuById(beliEditModal.perahuId);
-
-    if (!beliEditModal.show) setWarning({ ...warning, show: false });
-  }, [beliEditModal.show]);
+  const { beliEditModal, setBeliEditModal, closeBeliEditModal, daftarWarna } =
+    useContext(BeliEditModalContext);
+  const { headerMessage, setHeaderMessage } = useContext(HeaderMessageContext);
 
   /**
    * Menjalankan request beli atau edit perahu ketika form modal disubmit
    */
   const formSubmit = async () => {
     if (beliEditModal.mode === "BELI") {
+      // Beli perahu
       try {
         const res = await fetch(`${apiUrl}/perahu`, {
           method: "POST",
@@ -90,64 +31,109 @@ function BeliEditModal({ handleClose }) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            ...perahu,
-            capacity: parseFloat(perahu.capacity),
+            name: beliEditModal.perahu.name,
+            description: beliEditModal.perahu.description,
+            capacity: parseFloat(beliEditModal.perahu.capacity),
+            color: beliEditModal.perahu.color,
           }),
         });
         const data = await res.json();
         if (data.status === "FAILED") throw new Error(data.message);
+
         setDaftarPerahu([...daftarPerahu, data.perahu]);
-        handleClose();
+        closeBeliEditModal();
+        setHeaderMessage({
+          ...headerMessage,
+          show: true,
+          message: data.message,
+        });
       } catch (error) {
-        setWarning({ show: true, message: error.message });
+        setBeliEditModal({
+          ...beliEditModal,
+          warning: {
+            show: true,
+            message: error.message,
+          },
+        });
       }
     } else {
+      // Edit perahu
       try {
-        const res = await fetch(`${apiUrl}/perahu/${beliEditModal.perahuId}`, {
+        const res = await fetch(`${apiUrl}/perahu/${beliEditModal.perahu.id}`, {
           method: "PATCH",
           headers: {
             Authorization: `Bearer ${import.meta.env.VITE_ACCESS_TOKEN}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            ...perahu,
-            capacity: parseFloat(perahu.capacity),
+            name: beliEditModal.perahu.name,
+            description: beliEditModal.perahu.description,
+            capacity: parseFloat(beliEditModal.perahu.capacity),
+            color: beliEditModal.perahu.color,
           }),
         });
         const data = await res.json();
         if (data.status === "FAILED") throw new Error(data.message);
+
         const now = new Date().toLocaleString();
         setDaftarPerahu(
           daftarPerahu.map((item) =>
-            item.id === beliEditModal.perahuId
-              ? { ...item, ...perahu, updated_at: now }
+            item.id === beliEditModal.perahu.id
+              ? {
+                  ...item,
+                  ...beliEditModal.perahu,
+                  updated_at: now,
+                }
               : item
           )
         );
-        handleClose();
+        closeBeliEditModal();
+        setHeaderMessage({
+          ...headerMessage,
+          show: true,
+          message: data.message,
+        });
       } catch (error) {
-        setWarning({ show: true, message: error.message });
+        setBeliEditModal({
+          ...beliEditModal,
+          warning: {
+            show: true,
+            message: error.message,
+          },
+        });
       }
     }
   };
 
   return (
-    <Modal show={beliEditModal.show} onHide={handleClose}>
+    <Modal show={beliEditModal.show} onHide={closeBeliEditModal}>
       <Modal.Header closeButton>
         <Modal.Title>
           {beliEditModal.mode === "BELI" ? "Beli Perahu" : "Edit Perahu"}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {warning.show ? <Alert variant="warning">{warning.message}</Alert> : ""}
+        {beliEditModal.warning.show ? (
+          <Alert variant="warning">{beliEditModal.warning.message}</Alert>
+        ) : (
+          ""
+        )}
         <Form>
           <Form.Group className="mb-3" controlId="formPerahuName">
             <Form.Label>Nama perahu</Form.Label>
             <Form.Control
               type="text"
               autoFocus
-              value={perahu.name}
-              onChange={(e) => setPerahu({ ...perahu, name: e.target.value })}
+              value={beliEditModal.perahu.name}
+              onChange={(e) =>
+                setBeliEditModal({
+                  ...beliEditModal,
+                  perahu: {
+                    ...beliEditModal.perahu,
+                    name: e.target.value,
+                  },
+                })
+              }
             />
           </Form.Group>
           <Form.Group className="mb-3" controlId="formPerahuDescription">
@@ -155,9 +141,15 @@ function BeliEditModal({ handleClose }) {
             <Form.Control
               as="textarea"
               rows={3}
-              value={perahu.description}
+              value={beliEditModal.perahu.description}
               onChange={(e) =>
-                setPerahu({ ...perahu, description: e.target.value })
+                setBeliEditModal({
+                  ...beliEditModal,
+                  perahu: {
+                    ...beliEditModal.perahu,
+                    description: e.target.value,
+                  },
+                })
               }
             />
           </Form.Group>
@@ -165,9 +157,15 @@ function BeliEditModal({ handleClose }) {
             <Form.Label>Kapasitas</Form.Label>
             <Form.Control
               type="number"
-              value={perahu.capacity}
+              value={beliEditModal.perahu.capacity}
               onChange={(e) =>
-                setPerahu({ ...perahu, capacity: e.target.value })
+                setBeliEditModal({
+                  ...beliEditModal,
+                  perahu: {
+                    ...beliEditModal.perahu,
+                    capacity: e.target.value,
+                  },
+                })
               }
             />
           </Form.Group>
@@ -175,8 +173,16 @@ function BeliEditModal({ handleClose }) {
             <Form.Label>Warna</Form.Label>
             <Form.Select
               aria-label="Pilih warna"
-              value={perahu.color}
-              onChange={(e) => setPerahu({ ...perahu, color: e.target.value })}
+              value={beliEditModal.perahu.color}
+              onChange={(e) =>
+                setBeliEditModal({
+                  ...beliEditModal,
+                  perahu: {
+                    ...beliEditModal.perahu,
+                    color: e.target.value,
+                  },
+                })
+              }
             >
               {daftarWarna.map((warna, index) => (
                 <option key={index} value={warna}>
@@ -188,7 +194,7 @@ function BeliEditModal({ handleClose }) {
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>
+        <Button variant="secondary" onClick={closeBeliEditModal}>
           Batalkan
         </Button>
         <Button variant="primary" onClick={formSubmit}>
